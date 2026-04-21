@@ -92,11 +92,15 @@ export interface MdfPageError {
     message: string;
 }
 
-export interface ExtractionResult {
+export interface MdfDictionary {
     metadata: MdfMetadata;
     entries: MdfEntry[];
     pages_with_errors: MdfPageError[];
     total_entries_extracted: number;
+}
+
+export interface ExtractionResult {
+    dictionary: MdfDictionary;
     warnings: string[];
 }
 

@@ -1,0 +1,79 @@
+# =============================================================================
+# MDF Dictionary Extractor — Docker Compose stack
+# =============================================================================
+# Starts two services:
+#   * api  — FastAPI backend (Python 3.12 + Tesseract OCR).
+#   * web  — React SPA served by Nginx, reverse-proxying /api/ to the backend.
+#
+# Usage:
+#   docker compose up --build          # build + start in foreground
+#   docker compose up -d               # detach
+#   docker compose logs -f api         # follow API logs
+#   docker compose down                # stop + remove containers
+#
+# Secrets:
+#   The `api` service loads its environment from `api/.env`. Copy
+#   `api/.env.example` to `api/.env` and fill in the LLM API keys before
+#   starting the stack.
+# =============================================================================
+
+name: mdf-extractor
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend API
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    image: mdf-extractor/api:latest
+    container_name: mdf-api
+    restart: unless-stopped
+    env_file:
+      - ./api/.env
+    environment:
+      # Override sensitive defaults here if needed; values in .env take
+      # precedence when present.
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8000"
+    ports:
+      # Exposed on the host so /docs and /api/v1/* are reachable directly
+      # (useful for debugging, curl, and the OpenAPI UI).
+      - "8000:8000"
+    networks:
+      - mdf-net
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # ---------------------------------------------------------------------------
+  # Frontend (Nginx serving the Vite build + /api/ reverse proxy)
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        # Empty => SPA uses relative URLs; Nginx proxies /api/ to api:8000.
+        VITE_API_BASE_URL: ""
+    image: mdf-extractor/web:latest
+    container_name: mdf-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    networks:
+      - mdf-net
+
+# -----------------------------------------------------------------------------
+# Network
+# -----------------------------------------------------------------------------
+networks:
+  mdf-net:
+    driver: bridge

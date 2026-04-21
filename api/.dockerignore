@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[oc]
+*.egg-info/
+build/
+dist/
+wheels/
+
+# Virtual environments
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets (mounted via env_file at runtime — never baked into the image)
+.env
+.env.*
+!.env.example
+
+# Dev-only
+tests/
+uv.lock
+
+# VCS / editor
+.git/
+.gitignore
+.idea/
+.vscode/
+*.swp
